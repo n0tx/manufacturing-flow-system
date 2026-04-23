@@ -29,4 +29,27 @@ Agar memudahkan proses pengetesan API di Swagger atau Postman, aplikasi ini meny
 | `finance` | `finance123` | **FINANCE** |
 
 4. *Copy* JWT token yang dikembalikan dari hasil login.
-5. Klik tombol **Authorize** (gembok) di kanan atas Swagger UI, lalu *paste* token Anda. Anda kini bisa mengakses semua endpoint yang diamankan!
+5. Klik tombol **Authorize** (gembok) di kanan atas Swagger UI, lalu *paste* token Anda (jangan lupa awali dengan kata `Bearer `, contoh: `Bearer eyJ...`). Anda kini bisa mengakses semua endpoint yang diamankan!
+
+## Panduan Pengetesan Alur (Flow)
+
+Setelah Anda melakukan otentikasi di Swagger sebagai `admin`, ikuti urutan pengetesan berikut:
+
+### 1. Master Data (Customer & Product)
+*Pastikan Anda sudah login sebagai Admin.*
+- **POST /api/customers**: Masukkan data JSON customer (contoh: `{"name": "PT Maju Terus", "email": "info@maju.com", "phone": "08111", "address": "Jakarta"}`).
+- **GET /api/customers**: Pastikan data customer berhasil ditarik dan mendapatkan `id: 1`.
+- **POST /api/products**: Masukkan data JSON produk (contoh: `{"name": "Kain Katun", "sku": "FAB-01", "price": 50000, "description": "Katun Premium"}`).
+- **GET /api/products**: Pastikan data produk berhasil ditarik dan mendapatkan `id: 1`.
+
+### 2. Order Flow (Sales)
+*Pastikan Anda sudah login sebagai Admin.*
+- **POST /api/orders**: Buat order baru dengan merujuk pada `id` customer dan produk yang baru saja dibuat. Contoh JSON:
+  ```json
+  {
+    "customerId": 1,
+    "productId": 1,
+    "quantity": 100
+  }
+  ```
+- **GET /api/orders**: Pastikan order berhasil tersimpan. Sistem akan mengalikan harga dengan quantity secara otomatis menjadi `totalPrice` dan menetapkan status pesanan sebagai `CREATED`.
