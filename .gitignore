@@ -1,0 +1,5 @@
+mydocs/
+backend/target/
+.idea/
+*.iml
+.vscode/
