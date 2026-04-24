@@ -64,30 +64,34 @@ products ──┘       │
 
 ### Langkah-langkah
 
+**1. Menjalankan Backend (Spring Boot)**
 1. **Buat database kosong** di PostgreSQL:
    ```sql
    CREATE DATABASE manufacturing_db;
    ```
-
-2. **Sesuaikan koneksi database** di file `backend/src/main/resources/application.properties`:
-   ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/manufacturing_db
-   spring.datasource.username=postgres
-   spring.datasource.password=postgres
-   ```
-
-3. **Jalankan aplikasi**:
+2. **Jalankan aplikasi backend**:
    ```bash
    cd backend
    ./mvnw clean spring-boot:run
    ```
+3. Backend akan berjalan di `http://localhost:8080` (termasuk Swagger UI).
 
-4. **Buka Swagger UI** di browser:
+**2. Menjalankan Frontend (Vue.js)**
+1. Buka terminal baru dan masuk ke folder frontend:
+   ```bash
+   cd frontend
    ```
-   http://localhost:8080/swagger-ui/index.html
+2. Instal dependensi dan jalankan server *development*:
+   ```bash
+   npm install
+   npm run dev
+   ```
+3. Buka **Frontend Dashboard** di browser:
+   ```
+   http://localhost:5173
    ```
 
-> **Tips untuk Demo Ulang:** Jika ingin mereset database dari awal (data bersih), ubah `spring.jpa.hibernate.ddl-auto=update` menjadi `create-drop` di `application.properties`, lalu restart. Setelah selesai, kembalikan ke `update`.
+> **Tips untuk Demo Ulang:** Jika ingin mereset database dari awal (data bersih), ubah `spring.jpa.hibernate.ddl-auto=update` menjadi `create-drop` di `backend/src/main/resources/application.properties`, lalu restart backend. Setelah selesai, kembalikan ke `update`.
 
 ---
 
