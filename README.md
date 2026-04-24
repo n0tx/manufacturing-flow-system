@@ -1,138 +1,165 @@
 # Manufacturing Flow System MVP
 
-Sistem Backend API untuk mengelola alur manufaktur tekstil secara end-to-end.
-Terinspirasi dari proses bisnis nyata perusahaan tekstil Indonesia.
+Sistem MVP untuk mendemonstrasikan **Alur Manufaktur Tekstil** — mulai dari pemesanan kain hingga pelunasan pembayaran.
+Dibangun menggunakan **Java 17 + Spring Boot 3.2.4** (Backend) dengan dokumentasi API otomatis via **Swagger UI**.
+
+> Proyek ini terinspirasi dari proses bisnis perusahaan tekstil **PT Sinar Sukses Mandiri** yang bergerak di bidang Knitting, Dyeing, dan Printing kain.
+
+---
 
 ## Tech Stack
 
-| Komponen | Teknologi |
+| Layer | Teknologi |
 | :--- | :--- |
 | Language | Java 17 |
 | Framework | Spring Boot 3.2.4 |
 | Database | PostgreSQL |
-| Security | JWT (JSON Web Token) + Role-Based Access |
-| API Docs | Swagger (springdoc-openapi 2.6.0) |
-| Build Tool | Maven |
+| ORM | Spring Data JPA (Hibernate) |
+| Security | Spring Security + JWT Token |
+| API Docs | Springdoc OpenAPI (Swagger UI) |
+| Build Tool | Maven Wrapper |
+
+---
 
 ## Arsitektur & Pola Desain
 
-Aplikasi ini menggunakan **Clean Architecture** (Controller → Service → Repository) dengan 3 pola desain utama:
+Aplikasi ini menerapkan tiga pola desain utama:
 
-1. **State Machine Pattern** — Setiap order memiliki status yang bergerak maju secara berurutan dan tidak bisa dilompati.
-2. **Transaction/Event Log Pattern** — Setiap tahapan bisnis dicatat di tabel terpisah (child table) yang berelasi ke tabel `orders`.
-3. **Role-Based Constraint** — Setiap endpoint dikunci berdasarkan role user yang berhak mengaksesnya.
+1. **State Machine Pattern** — Setiap pesanan (`Order`) memiliki kolom `status` yang bergerak maju secara berurutan. Sistem akan **menolak** jika urutan dilompati.
+2. **Transaction / Event Log Pattern** — Setiap tahapan (Receiving, Production, Delivery, Payment) dicatat di **tabel terpisah** yang berelasi ke `Order`, sehingga menghasilkan jejak audit (*audit trail*) yang lengkap.
+3. **Role-Based Access Control** — Setiap endpoint diamankan berdasarkan peran pengguna (Admin, Gudang, Produksi, Finance).
 
-## Alur Status Order (State Machine)
+### Alur Status Pesanan (Order Flow)
 
 ```
 CREATED → MATERIAL_PREPARED → IN_PRODUCTION → COMPLETED_PRODUCTION → DELIVERED → PAID
+  │              │                   │                  │                 │          │
+  │              │                   │                  │                 │          │
+ Order        Receiving          Production          Production        Delivery   Payment
+ dibuat       bahan baku         mesin jalan          selesai QC        dikirim    lunas
+              diterima           (Knitting,
+                                  Dyeing,
+                                  Printing)
 ```
 
-| Status | Artinya | Siapa yang Mengubah |
-| :--- | :--- | :--- |
-| `CREATED` | Pesanan baru dibuat | Admin / Sales |
-| `MATERIAL_PREPARED` | Bahan baku sudah diterima gudang | Gudang |
-| `IN_PRODUCTION` | Sedang dalam proses produksi | Produksi |
-| `COMPLETED_PRODUCTION` | Produksi selesai, lolos QC | Produksi |
-| `DELIVERED` | Barang sudah dikirim ke pelanggan | Gudang / Logistik |
-| `PAID` | Pembayaran lunas diterima | Finance |
+### Relasi Antar Tabel (ERD Sederhana)
+
+```
+customers ──┐
+            ├──> orders ──> receivings
+products ──┘       │
+                   ├──────> productions (banyak log per order)
+                   ├──────> deliveries
+                   └──────> payments
+```
+
+---
 
 ## Cara Menjalankan
 
 ### Prasyarat
-- Java 17
+- Java 17 (JDK)
 - PostgreSQL (running)
-- Database kosong bernama `manufacturing_db`
+- Terminal / Command Prompt
 
-### Menjalankan Aplikasi
-```bash
-cd backend/
-./mvnw clean spring-boot:run
-```
+### Langkah-langkah
 
-### Membuka API Docs (Swagger UI)
-```
-http://localhost:8080/swagger-ui/index.html
-```
+1. **Buat database kosong** di PostgreSQL:
+   ```sql
+   CREATE DATABASE manufacturing_db;
+   ```
 
-### Reset Database (Fresh Start untuk Demo)
-Ubah konfigurasi di `backend/src/main/resources/application.properties`:
-```properties
-# Ganti 'update' menjadi 'create-drop' untuk reset total
-spring.jpa.hibernate.ddl-auto=create-drop
-```
-Jalankan ulang aplikasi, lalu kembalikan ke `update` setelah selesai.
+2. **Sesuaikan koneksi database** di file `backend/src/main/resources/application.properties`:
+   ```properties
+   spring.datasource.url=jdbc:postgresql://localhost:5432/manufacturing_db
+   spring.datasource.username=postgres
+   spring.datasource.password=postgres
+   ```
 
----
+3. **Jalankan aplikasi**:
+   ```bash
+   cd backend
+   ./mvnw clean spring-boot:run
+   ```
 
-## Panduan Demo (Step-by-Step)
+4. **Buka Swagger UI** di browser:
+   ```
+   http://localhost:8080/swagger-ui/index.html
+   ```
 
-Ikuti langkah-langkah di bawah ini secara berurutan dari atas ke bawah.
-Semua payload JSON sudah siap di-copy-paste.
-
----
-
-### STEP 0: Seed User & Login
-
-**0.1 — Seed akun demo**
-
-Endpoint: `POST /api/auth/seed` → klik Try it out → Execute.
-
-Akun yang tersedia setelah seed:
-
-| Username | Password | Role |
-| :--- | :--- | :--- |
-| `admin` | `admin123` | ADMIN |
-| `gudang` | `gudang123` | GUDANG |
-| `produksi` | `produksi123` | PRODUKSI |
-| `finance` | `finance123` | FINANCE |
-
-**0.2 — Login sebagai Admin**
-
-Endpoint: `POST /api/auth/login`
-```json
-{
-  "username": "admin",
-  "password": "admin123"
-}
-```
-Copy token dari response, klik tombol **Authorize** (🔒), paste dengan format: `Bearer <token>`.
+> **Tips untuk Demo Ulang:** Jika ingin mereset database dari awal (data bersih), ubah `spring.jpa.hibernate.ddl-auto=update` menjadi `create-drop` di `application.properties`, lalu restart. Setelah selesai, kembalikan ke `update`.
 
 ---
 
-### STEP 1: Buat Master Data
+## Kredensial Demo
 
-**1.1 — Buat Customer**
+Aplikasi menyediakan fitur *Auto-Seed* untuk mengisi tabel user dengan akun dummy.
 
-Endpoint: `POST /api/customers`
+**Langkah:** Jalankan `POST /api/auth/seed` di Swagger (tanpa perlu login).
+
+| Username | Password | Role | Hak Akses |
+| :--- | :--- | :--- | :--- |
+| `admin` | `admin123` | **ADMIN** | Semua fitur |
+| `gudang` | `gudang123` | **GUDANG** | Receiving, Delivery |
+| `produksi` | `produksi123` | **PRODUKSI** | Production |
+| `finance` | `finance123` | **FINANCE** | Payment |
+
+**Cara Login & Otorisasi:**
+1. Jalankan `POST /api/auth/login` (username & password sudah terisi otomatis di Swagger).
+2. *Copy* nilai `token` dari response.
+3. Klik tombol **Authorize** (🔒) di kanan atas Swagger UI.
+4. Ketik `Bearer ` (dengan spasi) lalu *paste* token. Contoh: `Bearer eyJhbGci...`
+5. Klik **Authorize** → **Close**. Selesai!
+
+---
+
+## Panduan Demo End-to-End (Step by Step)
+
+Ikuti langkah-langkah berikut secara berurutan untuk mendemonstrasikan seluruh alur manufaktur dari awal hingga akhir.
+
+---
+
+### STEP 1 — Seed User & Login
+
+**Endpoint:** `POST /api/auth/seed`
+> Klik Try it out → Execute. Sistem akan membuat 4 akun user.
+
+**Endpoint:** `POST /api/auth/login`
+> Klik Try it out → Execute (sudah terisi admin/admin123). Copy token dari response.
+
+**Lalu:** Klik tombol 🔒 **Authorize** → paste `Bearer <token>` → Authorize → Close.
+
+---
+
+### STEP 2 — Buat Master Data
+
+**Endpoint:** `POST /api/customers`
 ```json
 {
   "name": "PT Maju Terus Tekstil",
   "email": "purchasing@majuterus.com",
   "phone": "08123456789",
-  "address": "Jl. Industri No 5, Tangerang"
+  "address": "Jl. Industri No 5, Kawasan Industri Pulogadung, Jakarta Timur"
 }
 ```
+> Verifikasi: `GET /api/customers` → pastikan mendapatkan `id: 1`.
 
-**1.2 — Buat Product**
-
-Endpoint: `POST /api/products`
+**Endpoint:** `POST /api/products`
 ```json
 {
   "name": "Kain Katun Combed 30s",
   "sku": "FAB-COM30-001",
   "price": 55000,
-  "description": "Kain katun premium kualitas ekspor, warna hitam"
+  "description": "Kain katun combed kualitas ekspor, warna hitam, lebar 150cm"
 }
 ```
-
-**Verifikasi:** `GET /api/customers` dan `GET /api/products` — pastikan masing-masing mendapat `id: 1`.
+> Verifikasi: `GET /api/products` → pastikan mendapatkan `id: 1`.
 
 ---
 
-### STEP 2: Buat Order
+### STEP 3 — Buat Pesanan (Order)
 
-Endpoint: `POST /api/orders`
+**Endpoint:** `POST /api/orders`
 ```json
 {
   "customerId": 1,
@@ -140,83 +167,78 @@ Endpoint: `POST /api/orders`
   "quantity": 100
 }
 ```
-
-**Verifikasi:** `GET /api/orders/1`
-- `totalPrice` otomatis terhitung: 55.000 × 100 = **5.500.000**
-- `status`: **CREATED**
+> **Hasil:** Order tersimpan dengan `totalPrice: 5500000` (100 × 55000) dan status **`CREATED`**.
+>
+> Verifikasi: `GET /api/orders/1`
 
 ---
 
-### STEP 3: Receiving (Gudang Terima Bahan Baku)
+### STEP 4 — Penerimaan Bahan Baku (Receiving)
 
-*Login sebagai `gudang` / `gudang123`, atau tetap pakai admin.*
+*Login sebagai `gudang` / `gudang123` (atau tetap admin).*
 
-Endpoint: `POST /api/receivings`
+**Endpoint:** `POST /api/receivings`
 ```json
 {
   "orderId": 1,
-  "rawMaterialNotes": "Benang Katun Combed Putih 500kg + Obat Pewarna Hitam 50L"
+  "rawMaterialNotes": "Diterima: Benang Katun Combed Putih 1000kg, Obat Pewarna Hitam 50kg"
 }
 ```
-
-**Verifikasi:** `GET /api/orders/1` → status berubah menjadi **MATERIAL_PREPARED**
+> **Hasil:** Data receiving tersimpan, status order berubah menjadi **`MATERIAL_PREPARED`**.
+>
+> Verifikasi: `GET /api/orders/1` → cek status.
 
 ---
 
-### STEP 4: Production (Proses Produksi di Pabrik)
+### STEP 5 — Proses Produksi (Production)
 
-*Login sebagai `produksi` / `produksi123`, atau tetap pakai admin.*
+*Login sebagai `produksi` / `produksi123` (atau tetap admin).*
 
-**4.1 — Log Aktivitas Knitting (Merajut)**
-
-Endpoint: `POST /api/productions`
+**Endpoint:** `POST /api/productions` — Tahap 1: Knitting (Rajut)
 ```json
 {
   "orderId": 1,
   "productionType": "KNITTING",
   "machineId": "MESIN-RJT-01",
-  "notes": "Merajut benang katun combed menjadi kain mentah"
+  "notes": "Merajut benang katun combed menjadi kain grey 150cm"
 }
 ```
-→ Status order berubah menjadi **IN_PRODUCTION**
+> **Hasil:** Log produksi tersimpan, status order berubah menjadi **`IN_PRODUCTION`**.
 
-**4.2 — Log Aktivitas Dyeing (Pencelupan Warna)**
-
-Endpoint: `POST /api/productions`
+**Endpoint:** `POST /api/productions` — Tahap 2: Dyeing (Celup Warna)
 ```json
 {
   "orderId": 1,
   "productionType": "DYEING",
   "machineId": "MESIN-DYE-03",
-  "notes": "Pencelupan warna hitam pekat, suhu 90 derajat"
+  "notes": "Pencelupan warna hitam pekat, suhu 90°C selama 4 jam"
 }
 ```
 
-**4.3 — Log Aktivitas Printing (Pencetakan Motif)**
-
-Endpoint: `POST /api/productions`
+**Endpoint:** `POST /api/productions` — Tahap 3: Printing (Cetak Motif)
 ```json
 {
   "orderId": 1,
   "productionType": "PRINTING",
   "machineId": "MESIN-PRT-02",
-  "notes": "Cetak motif logo pelanggan PT Maju Terus"
+  "notes": "Pencetakan motif logo pelanggan pada sisi kanan kain"
 }
 ```
 
-**4.4 — Tandai Produksi Selesai**
-
-Endpoint: `POST /api/productions/1/finish` → tidak perlu body, langsung Execute.
-
-**Verifikasi:** `GET /api/orders/1` → status berubah menjadi **COMPLETED_PRODUCTION**
+**Endpoint:** `POST /api/productions/1/finish` — Tandai Produksi Selesai
+> Klik Try it out → isi orderId = `1` → Execute. Tidak perlu request body.
+>
+> **Hasil:** Status order berubah menjadi **`COMPLETED_PRODUCTION`**.
+>
+> Verifikasi: `GET /api/orders/1` → cek status.
 
 ---
 
-### STEP 5: Delivery (Pengiriman ke Pelanggan)
+### STEP 6 — Pengiriman (Delivery)
 
-*Login sebagai `gudang` / `gudang123`, atau tetap pakai admin.*
+*Login sebagai `gudang` / `gudang123` (atau tetap admin).*
 
-Endpoint: `POST /api/deliveries`
+**Endpoint:** `POST /api/deliveries`
 ```json
 {
   "orderId": 1,
@@ -225,37 +247,52 @@ Endpoint: `POST /api/deliveries`
   "vehiclePlate": "B 1234 CD"
 }
 ```
-
-**Verifikasi:** `GET /api/orders/1` → status berubah menjadi **DELIVERED**
+> **Hasil:** Data pengiriman tersimpan, status order berubah menjadi **`DELIVERED`**.
+>
+> Verifikasi: `GET /api/orders/1` → cek status.
 
 ---
 
-### STEP 6: Payment (Pelunasan Pembayaran)
+### STEP 7 — Pembayaran (Payment)
 
-*Login sebagai `finance` / `finance123`, atau tetap pakai admin.*
+*Login sebagai `finance` / `finance123` (atau tetap admin).*
 
-Endpoint: `POST /api/payments`
+**Endpoint:** `POST /api/payments`
 ```json
 {
   "orderId": 1,
   "paymentMethod": "BANK_TRANSFER",
   "amountPaid": 5500000,
-  "referenceNumber": "BCA-TRF-20260424-001"
+  "referenceNumber": "BCA-TRF-20260424-998877"
 }
 ```
-
+> **Hasil:** Pembayaran tercatat, status order berubah menjadi **`PAID`** ✅
+>
 > ⚠️ `amountPaid` harus ≥ `totalPrice` (5.500.000). Jika kurang, sistem akan menolak.
-
-**Verifikasi:** `GET /api/orders/1` → status berubah menjadi **PAID** ✅
+>
+> Verifikasi: `GET /api/orders/1` → status = `PAID`. **Siklus pesanan selesai!**
 
 ---
 
-## 🎉 Demo Selesai!
+## Ringkasan Endpoint API
 
-Siklus pesanan telah berjalan dari awal hingga akhir:
-
-```
-CREATED → MATERIAL_PREPARED → IN_PRODUCTION → COMPLETED_PRODUCTION → DELIVERED → PAID
-```
-
-Setiap tahapan tercatat lengkap di tabel masing-masing (`receivings`, `productions`, `deliveries`, `payments`) sebagai audit trail / bukti transaksi.
+| # | Method | Endpoint | Role | Fungsi |
+|---|--------|----------|------|--------|
+| 1 | POST | `/api/auth/seed` | Public | Seed 4 user demo |
+| 2 | POST | `/api/auth/login` | Public | Login, dapat JWT token |
+| 3 | POST | `/api/customers` | ADMIN | Buat customer baru |
+| 4 | GET | `/api/customers` | Auth | Lihat semua customer |
+| 5 | POST | `/api/products` | ADMIN | Buat produk baru |
+| 6 | GET | `/api/products` | Auth | Lihat semua produk |
+| 7 | POST | `/api/orders` | ADMIN | Buat pesanan baru |
+| 8 | GET | `/api/orders` | Auth | Lihat semua pesanan |
+| 9 | GET | `/api/orders/{id}` | Auth | Detail pesanan |
+| 10 | POST | `/api/receivings` | ADMIN, GUDANG | Catat penerimaan bahan |
+| 11 | GET | `/api/receivings` | Auth | Lihat semua penerimaan |
+| 12 | POST | `/api/productions` | ADMIN, PRODUKSI | Catat aktivitas mesin |
+| 13 | POST | `/api/productions/{id}/finish` | ADMIN, PRODUKSI | Tandai produksi selesai |
+| 14 | GET | `/api/productions` | Auth | Lihat semua log produksi |
+| 15 | POST | `/api/deliveries` | ADMIN, GUDANG | Catat pengiriman |
+| 16 | GET | `/api/deliveries` | Auth | Lihat semua pengiriman |
+| 17 | POST | `/api/payments` | ADMIN, FINANCE | Catat pembayaran |
+| 18 | GET | `/api/payments` | Auth | Lihat semua pembayaran |
