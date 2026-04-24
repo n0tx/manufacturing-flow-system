@@ -53,3 +53,54 @@ Setelah Anda melakukan otentikasi di Swagger sebagai `admin`, ikuti urutan penge
   }
   ```
 - **GET /api/orders**: Pastikan order berhasil tersimpan. Sistem akan mengalikan harga dengan quantity secara otomatis menjadi `totalPrice` dan menetapkan status pesanan sebagai `CREATED`.
+
+### 3. Receiving Flow (Gudang)
+*Pastikan Anda sudah login sebagai Admin atau Gudang (`gudang` / `gudang123`).*
+- **POST /api/receivings**: Proses penerimaan bahan baku untuk pesanan yang ada. Contoh JSON:
+  ```json
+  {
+    "orderId": 1,
+    "rawMaterialNotes": "Benang Katun Combed Putih 1000kg"
+  }
+  ```
+- *Perhatikan*: Sistem akan memvalidasi apakah status order masih `CREATED`. Jika ya, data akan disimpan dan status order otomatis berubah menjadi `MATERIAL_PREPARED`. Cek kembali dengan `GET /api/orders`.
+
+### 4. Production Flow (Pabrik)
+*Pastikan Anda sudah login sebagai Admin atau Produksi (`produksi` / `produksi123`).*
+- **POST /api/productions**: Catat aktivitas mesin. Contoh JSON:
+  ```json
+  {
+    "orderId": 1,
+    "productionType": "KNITTING",
+    "machineId": "MESIN-RJT-01",
+    "notes": "Merajut benang katun combed"
+  }
+  ```
+- *Perhatikan*: Status order akan berubah dari `MATERIAL_PREPARED` menjadi `IN_PRODUCTION`.
+- **POST /api/productions/1/finish**: Jika seluruh tahapan produksi (Knitting, Dyeing, Printing) sudah selesai, panggil endpoint ini untuk menandai produksi rampung. Status order akan berubah menjadi `COMPLETED_PRODUCTION`.
+
+### 5. Delivery Flow (Logistik Gudang)
+*Pastikan Anda login sebagai Admin atau Gudang (`gudang` / `gudang123`).*
+- **POST /api/deliveries**: Proses pengiriman barang yang sudah jadi. Contoh JSON:
+  ```json
+  {
+    "orderId": 1,
+    "trackingNumber": "RESI-00123",
+    "driverName": "Budi Santoso",
+    "vehiclePlate": "B 1234 CD"
+  }
+  ```
+- *Perhatikan*: Status order otomatis berubah menjadi `DELIVERED`.
+
+### 6. Payment Flow (Keuangan)
+*Pastikan Anda login sebagai Admin atau Finance (`finance` / `finance123`).*
+- **POST /api/payments**: Catat pembayaran dari pelanggan. Contoh JSON:
+  ```json
+  {
+    "orderId": 1,
+    "paymentMethod": "BANK_TRANSFER",
+    "amountPaid": 5000000,
+    "referenceNumber": "BCA-998877"
+  }
+  ```
+- *Perhatikan*: Sistem akan memvalidasi apakah tagihan dibayar penuh (`amountPaid` >= `totalPrice`). Jika sukses, status order berubah menjadi `PAID` dan siklus pesanan selesai!
