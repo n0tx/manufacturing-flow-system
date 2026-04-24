@@ -1,0 +1,11 @@
+bro tolong buatin
+nanti untuk test backend 1 flow,
+jadi saya bisa contoh ulang, dan
+buat bersihinnya nanti saya ddl-auto=create
+jadi saya bisa latihan,
+dan demo jadi terbiasa
+
+seperti waktu deliveries order berhasil di post, maka status order akan berubah menjadi DELIVERED di sales / order flow
+
+itu bro tahap 1 flow penjelasan,
+contoh payload yang valid,
