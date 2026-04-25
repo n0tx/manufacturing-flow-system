@@ -33,10 +33,10 @@ Aplikasi ini menerapkan tiga pola desain utama:
 
 ```
 CREATED → MATERIAL_PREPARED → IN_PRODUCTION → COMPLETED_PRODUCTION → DELIVERED → PAID
-  │              │                   │                  │                 │          │
-  │              │                   │                  │                 │          │
+  │              │                   │                  │                 │        │
+  │              │                   │                  │                 │        │
  Order        Receiving          Production          Production        Delivery   Payment
- dibuat       bahan baku         mesin jalan          selesai QC        dikirim    lunas
+ dibuat       bahan baku         mesin jalan         selesai QC        dikirim    lunas
               diterima           (Knitting,
                                   Dyeing,
                                   Printing)
@@ -47,7 +47,7 @@ CREATED → MATERIAL_PREPARED → IN_PRODUCTION → COMPLETED_PRODUCTION → DEL
 ```
 customers ──┐
             ├──> orders ──> receivings
-products ──┘       │
+products  ──┘      │
                    ├──────> productions (banyak log per order)
                    ├──────> deliveries
                    └──────> payments
