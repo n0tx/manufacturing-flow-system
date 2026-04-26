@@ -35,6 +35,8 @@ public class PaymentService {
         // Validasi tambahan: Pastikan jumlah yang dibayar cukup
         if (request.getAmountPaid().compareTo(order.getTotalPrice()) < 0) {
             throw new RuntimeException("Error: Amount paid is less than the total price.");
+        } else if (request.getAmountPaid().compareTo(order.getTotalPrice()) > 0) {
+            throw new RuntimeException("Error: Amount paid is more than the total price, Please recheck your input!");
         }
 
         Payment payment = Payment.builder()
