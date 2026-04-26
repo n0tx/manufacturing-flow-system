@@ -3,6 +3,7 @@ package com.example.manufacturing_flow.service;
 import com.example.manufacturing_flow.dto.OrderRequest;
 import com.example.manufacturing_flow.entity.Customer;
 import com.example.manufacturing_flow.entity.Order;
+import com.example.manufacturing_flow.entity.OrderStatus;
 import com.example.manufacturing_flow.entity.Product;
 import com.example.manufacturing_flow.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +20,16 @@ public class OrderService {
     private final CustomerService customerService;
     private final ProductService productService;
 
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    public List<Order> getAllOrders(String status) {
+        if (status == null || status.isBlank()) {
+            return orderRepository.findAll();
+        }
+        try {
+            OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+            return orderRepository.findByStatus(orderStatus);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid order status: " + status);
+        }
     }
 
     public Order getOrderById(Long id) {
