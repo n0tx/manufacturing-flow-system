@@ -39,4 +39,12 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody OrderRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Order created successfully", orderService.createOrder(request)));
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Cancel new order")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", null));
+    }
 }

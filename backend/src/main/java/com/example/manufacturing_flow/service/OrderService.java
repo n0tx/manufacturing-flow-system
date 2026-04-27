@@ -51,4 +51,12 @@ public class OrderService {
 
         return orderRepository.save(order);
     }
+
+    public void deleteOrder(Long id) {
+        Order order = getOrderById(id);
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new RuntimeException("Tidak dapat membatalkan karena order sudah diproses!");
+        }
+        orderRepository.delete(order);
+    }
 }
