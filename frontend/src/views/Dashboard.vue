@@ -104,6 +104,16 @@ const closeModal = () => {
   selectedOrder.value = null;
 };
 
+const cancelOrder = async (orderId) => {
+  if (!confirm('Yakin ingin membatalkan pesanan ini?')) return;
+  try {
+    await api.delete('/orders/' + orderId);
+    await fetchData();
+  } catch (error) {
+    alert(error.response?.data?.message || 'Gagal membatalkan pesanan.');
+  }
+};
+
 const submitAction = async () => {
   modalLoading.value = true;
   modalError.value = '';
@@ -267,7 +277,9 @@ const submitAction = async () => {
                     <button v-if="order.status === 'CREATED'" @click="openModal('RECEIVING', order)" class="btn btn-sm btn-primary">
                       1. Terima Bahan
                     </button>
-                    
+                    <button v-if="order.status === 'CREATED'" @click="cancelOrder(order.id)" class="btn btn-sm btn-outline-danger">
+                      Batal Pesan
+                    </button>
                     <button v-else-if="order.status === 'MATERIAL_PREPARED'" @click="openModal('PRODUCTION', order)" class="btn btn-sm btn-warning">
                       2. Mulai Produksi
                     </button>
