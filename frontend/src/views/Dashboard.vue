@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 
@@ -11,6 +11,7 @@ const role = ref(localStorage.getItem('role') || 'UNKNOWN');
 const summary = ref(null);
 const orders = ref([]);
 const loading = ref(true);
+const filterStatus = ref('');
 
 // Modal State
 const showModal = ref(false);
@@ -28,7 +29,7 @@ const fetchData = async () => {
   try {
     const [summaryRes, ordersRes] = await Promise.all([
       api.get('/dashboard/summary'),
-      api.get('/orders')
+      api.get('/orders', { params: { status: filterStatus.value}})
     ]);
     summary.value = summaryRes.data.data;
     orders.value = ordersRes.data.data.sort((a, b) => b.id - a.id); // Latest first
@@ -41,6 +42,10 @@ const fetchData = async () => {
     loading.value = false;
   }
 };
+
+watch(filterStatus, () => {
+  fetchData();
+});
 
 onMounted(() => {
   fetchData();
@@ -216,6 +221,15 @@ const submitAction = async () => {
         <div class="glass-card mt-6">
           <div class="table-header">
             <h2>Daftar Pesanan (Order List)</h2>
+            <select v-model="filterStatus" class="filter-dropdown">
+              <option value="">Semua Status</option>
+              <option value="CREATED">Baru (Created)</option>
+              <option value="MATERIAL_PREPARED">Bahan Siap</option>
+              <option value="IN_PRODUCTION">Dalam Produksi</option>
+              <option value="COMPLETED_PRODUCTION">Produksi Selesai</option>
+              <option value="DELIVERED">Terkirim</option>
+              <option value="PAID">Lunas (Paid)</option>
+            </select>
           </div>
           
           <div class="table-container">
@@ -623,5 +637,15 @@ const submitAction = async () => {
   text-align: center;
   padding: 5rem 0;
   color: var(--text-muted);
+}
+.filter-dropdown {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(30, 41, 59, 0.8);
+  color: white;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
 }
 </style>
