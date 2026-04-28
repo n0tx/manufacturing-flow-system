@@ -299,8 +299,8 @@ const submitAction = async () => {
                   <th>Produk</th>
                   <th>Qty</th>
                   <th>Total Harga</th>
-                  <th class="text-center">Status</th>
-                  <th class="text-center">Aksi (Workflow)</th>
+                  <th>Status</th>
+                  <th>Aksi (Workflow)</th>
                 </tr>
               </thead>
               <tbody>
@@ -314,7 +314,7 @@ const submitAction = async () => {
                   <td>{{ order.product?.name }}</td>
                   <td>{{ order.quantity }}</td>
                   <td>{{ formatCurrency(order.totalPrice) }}</td>
-                  <td class="text-center">
+                  <td>
                     <span class="badge" :class="getStatusBadgeClass(order.status)">
                       {{ order.status.replace('_', ' ') }}
                     </span>
@@ -829,7 +829,6 @@ const submitAction = async () => {
 .action-group {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   flex-wrap: nowrap;
 }
