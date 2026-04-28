@@ -21,6 +21,7 @@ const modalType = ref(''); // 'RECEIVING', 'PRODUCTION', 'DELIVERY', 'PAYMENT'
 const selectedOrder = ref(null);
 const modalLoading = ref(false);
 const modalError = ref('');
+const auditLogs = ref([]);
 
 // Modal Form Data
 const formData = ref({});
@@ -63,7 +64,14 @@ watch(searchQuery, () => {
 
 onMounted(() => {
   fetchData();
+  window.addEventListener('keydown', handleEscKey);
 });
+
+const handleEscKey = (e) => {
+  if (e.key === 'Escape' && showModal.value) {
+    closeModal();
+  }
+};
 
 const handleLogout = () => {
   localStorage.removeItem('token');
@@ -111,6 +119,23 @@ const openModal = (type, order) => {
   }
   
   showModal.value = true;
+};
+
+const openAuditModal = async (order) => {
+  selectedOrder.value = order;
+  modalType.value = 'AUDIT_LOG';
+  auditLogs.value = [];
+  modalLoading.value = true;
+  showModal.value = true;
+  
+  try {
+    const res = await api.get('/audit-logs/' + order.id);
+    auditLogs.value = res.data.data;
+  } catch (error) {
+    modalError.value = 'Gagal memuat sejarah pesanan.';
+  } finally {
+    modalLoading.value = false;
+  }
 };
 
 const closeModal = () => {
@@ -274,8 +299,8 @@ const submitAction = async () => {
                   <th>Produk</th>
                   <th>Qty</th>
                   <th>Total Harga</th>
-                  <th>Status</th>
-                  <th>Aksi (Workflow)</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Aksi (Workflow)</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,43 +314,47 @@ const submitAction = async () => {
                   <td>{{ order.product?.name }}</td>
                   <td>{{ order.quantity }}</td>
                   <td>{{ formatCurrency(order.totalPrice) }}</td>
-                  <td>
+                  <td class="text-center">
                     <span class="badge" :class="getStatusBadgeClass(order.status)">
                       {{ order.status.replace('_', ' ') }}
                     </span>
                   </td>
-                  <td>
-                    <!-- Interactive Action Buttons -->
-                    <button v-if="order.status === 'CREATED'" @click="openModal('RECEIVING', order)" class="btn btn-sm btn-primary">
-                      1. Terima Bahan
-                    </button>
-                    <button v-if="order.status === 'CREATED'" @click="cancelOrder(order.id)" class="btn btn-sm btn-outline-danger">
-                      Batal Pesan
-                    </button>
-                    <button v-else-if="order.status === 'MATERIAL_PREPARED'" @click="openModal('PRODUCTION', order)" class="btn btn-sm btn-warning">
-                      2. Mulai Produksi
-                    </button>
-                    
-                    <div v-else-if="order.status === 'IN_PRODUCTION'" class="btn-group">
-                      <button @click="openModal('PRODUCTION', order)" class="btn btn-sm btn-outline-warning" title="Tambah log mesin">
-                        + Log Mesin
+                  <td class="action-cell">
+                    <div class="action-group">
+                      <button v-if="order.status === 'CREATED'" @click="openModal('RECEIVING', order)" class="btn btn-sm btn-primary">
+                        1. Terima Bahan
                       </button>
-                      <button @click="openModal('FINISH_PRODUCTION', order)" class="btn btn-sm btn-warning">
-                        Selesai Produksi
+                      <button v-if="order.status === 'CREATED' && role === 'ADMIN'" @click="cancelOrder(order.id)" class="btn btn-sm btn-outline-danger">
+                        Batal
+                      </button>
+                      
+                      <button v-else-if="order.status === 'MATERIAL_PREPARED'" @click="openModal('PRODUCTION', order)" class="btn btn-sm btn-warning">
+                        2. Mulai Produksi
+                      </button>
+                      
+                      <div v-else-if="order.status === 'IN_PRODUCTION'" class="btn-group">
+                        <button @click="openModal('PRODUCTION', order)" class="btn btn-sm btn-outline-warning" title="Tambah log mesin">
+                          + Log
+                        </button>
+                        <button @click="openModal('FINISH_PRODUCTION', order)" class="btn btn-sm btn-warning">
+                          Selesai
+                        </button>
+                      </div>
+
+                      <button v-else-if="order.status === 'COMPLETED_PRODUCTION'" @click="openModal('DELIVERY', order)" class="btn btn-sm btn-info">
+                        3. Kirim Barang
+                      </button>
+                      
+                      <button v-else-if="order.status === 'DELIVERED'" @click="openModal('PAYMENT', order)" class="btn btn-sm btn-success">
+                        4. Catat Bayar
+                      </button>
+                      
+                      <button v-else-if="order.status === 'PAID'" class="btn btn-sm btn-disabled" disabled>✓ Lunas</button>
+
+                      <button @click="openAuditModal(order)" class="btn-history" title="Lihat History">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                       </button>
                     </div>
-
-                    <button v-else-if="order.status === 'COMPLETED_PRODUCTION'" @click="openModal('DELIVERY', order)" class="btn btn-sm btn-info">
-                      3. Kirim Barang
-                    </button>
-                    
-                    <button v-else-if="order.status === 'DELIVERED'" @click="openModal('PAYMENT', order)" class="btn btn-sm btn-success">
-                      4. Catat Bayar
-                    </button>
-                    
-                    <span v-else-if="order.status === 'PAID'" class="text-success fw-bold">
-                      ✓ Tuntas
-                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -424,12 +453,36 @@ const submitAction = async () => {
               </div>
             </div>
 
+            <div v-if="modalType === 'AUDIT_LOG'" class="audit-timeline">
+              <div v-if="modalLoading" class="text-center py-4">
+                <div class="spinner-small"></div>
+                <p>Memuat riwayat...</p>
+              </div>
+              <div v-else-if="auditLogs.length === 0" class="text-center py-4 text-gray-400">
+                Belum ada riwayat tercatat.
+              </div>
+              <div v-else class="timeline-container">
+                <div v-for="log in auditLogs" :key="log.id" class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="timeline-action">{{ log.action }}</span>
+                      <span class="timeline-time">{{ formatDate(log.timestamp) }}</span>
+                    </div>
+                    <p class="timeline-details">{{ log.details }}</p>
+                    <span class="timeline-user">Oleh: <strong>{{ log.username }}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="modal-footer mt-4">
               <button type="button" @click="closeModal" class="btn" style="background: transparent; color: white;">Batal</button>
-              <button type="submit" class="btn btn-primary" :disabled="modalLoading">
+              <button v-if="modalType !== 'AUDIT_LOG'" type="submit" class="btn btn-primary" :disabled="modalLoading">
                 <span v-if="modalLoading">Memproses...</span>
                 <span v-else>Simpan Data</span>
               </button>
+              <button v-else type="button" @click="closeModal" class="btn btn-primary">Tutup</button>
             </div>
           </form>
         </div>
@@ -589,6 +642,7 @@ const submitAction = async () => {
 .text-success { color: #4ade80; }
 .fw-bold { font-weight: bold; }
 .text-center { text-align: center; }
+.text-right { text-align: right; }
 .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
 
 /* Modal Styles */
@@ -699,5 +753,103 @@ const submitAction = async () => {
 .search-input:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Timeline Styles */
+.audit-timeline {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px 5px;
+}
+.timeline-container {
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  margin-left: 10px;
+  padding-left: 20px;
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+}
+.timeline-dot {
+  position: absolute;
+  left: -27px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-color);
+}
+.timeline-content {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.timeline-action {
+  font-weight: bold;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+.timeline-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.timeline-details {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.timeline-user {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+/* Action Button Layouts */
+.action-cell {
+  min-width: 220px;
+}
+.action-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.btn-history {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-left: 10px;
+}
+.btn-history:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-2px);
 }
 </style>
