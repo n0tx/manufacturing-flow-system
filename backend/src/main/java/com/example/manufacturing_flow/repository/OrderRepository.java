@@ -10,4 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     long countByStatus(OrderStatus status);
     List<Order> findByStatus(OrderStatus status);
+    List<Order> findByCustomerNameContainingIgnoreCase(String customerName);
+    List<Order> findByStatusAndCustomerNameContainingIgnoreCase(OrderStatus status, String customerName);
 }

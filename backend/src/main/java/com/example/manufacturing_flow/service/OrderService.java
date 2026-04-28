@@ -20,13 +20,31 @@ public class OrderService {
     private final CustomerService customerService;
     private final ProductService productService;
 
-    public List<Order> getAllOrders(String status) {
-        if (status == null || status.isBlank()) {
+    public List<Order> getAllOrders(String status, String customerName) {
+        boolean hasStatus = status != null && !status.isBlank();
+        boolean hasName = customerName != null && !customerName.isBlank();
+
+        // Kasus 1: Tidak ada filter sama sekali
+        if (!hasStatus && !hasName) {
             return orderRepository.findAll();
         }
+
+        // Kasus 2: Cuma cari Nama Customer
+        if (!hasStatus) {
+            return orderRepository.findByCustomerNameContainingIgnoreCase(customerName);
+        }
+
+        // Kasus 3: Cari berdasarkan Status (dan mungkin Nama)
         try {
             OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-            return orderRepository.findByStatus(orderStatus);
+            
+            if (hasName) {
+                // Cari Status DAN Nama
+                return orderRepository.findByStatusAndCustomerNameContainingIgnoreCase(orderStatus, customerName);
+            } else {
+                // Cuma cari Status
+                return orderRepository.findByStatus(orderStatus);
+            }
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid order status: " + status);
         }

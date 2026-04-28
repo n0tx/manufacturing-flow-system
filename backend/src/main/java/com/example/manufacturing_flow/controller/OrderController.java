@@ -23,8 +23,10 @@ public class OrderController {
 
     @GetMapping
     @Operation(summary = "Get all orders")
-    public ResponseEntity<ApiResponse<List<Order>>> getAllOrders(@RequestParam(required = false) String status) {
-        return ResponseEntity.ok(ApiResponse.success("Success", orderService.getAllOrders(status)));
+    public ResponseEntity<ApiResponse<List<Order>>> getAllOrders(
+        @RequestParam(required = false) String status, 
+        @RequestParam(required = false) String customerName) {
+        return ResponseEntity.ok(ApiResponse.success("Success", orderService.getAllOrders(status, customerName)));
     }
 
     @GetMapping("/{id}")
