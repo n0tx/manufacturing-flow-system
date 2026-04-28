@@ -12,6 +12,8 @@ const summary = ref(null);
 const orders = ref([]);
 const loading = ref(true);
 const filterStatus = ref('');
+const searchQuery = ref('');
+let debounceTimer = null;
 
 // Modal State
 const showModal = ref(false);
@@ -29,7 +31,12 @@ const fetchData = async () => {
   try {
     const [summaryRes, ordersRes] = await Promise.all([
       api.get('/dashboard/summary'),
-      api.get('/orders', { params: { status: filterStatus.value}})
+      api.get('/orders', { 
+        params: { 
+          status: filterStatus.value,
+          customerName: searchQuery.value
+        }
+      })
     ]);
     summary.value = summaryRes.data.data;
     orders.value = ordersRes.data.data.sort((a, b) => b.id - a.id); // Latest first
@@ -45,6 +52,13 @@ const fetchData = async () => {
 
 watch(filterStatus, () => {
   fetchData();
+});
+
+watch(searchQuery, () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    fetchData();
+  }, 500); // Tunggu 500ms setelah mengetik
 });
 
 onMounted(() => {
@@ -231,7 +245,14 @@ const submitAction = async () => {
         <div class="glass-card mt-6">
           <div class="table-header">
             <h2>Daftar Pesanan (Order List)</h2>
-            <select v-model="filterStatus" class="filter-dropdown">
+            <div class="filter-group">
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Cari nama customer..." 
+                class="search-input"
+              />
+              <select v-model="filterStatus" class="filter-dropdown">
               <option value="">Semua Status</option>
               <option value="CREATED">Baru (Created)</option>
               <option value="MATERIAL_PREPARED">Bahan Siap</option>
@@ -239,7 +260,8 @@ const submitAction = async () => {
               <option value="COMPLETED_PRODUCTION">Produksi Selesai</option>
               <option value="DELIVERED">Terkirim</option>
               <option value="PAID">Lunas (Paid)</option>
-            </select>
+              </select>
+            </div>
           </div>
           
           <div class="table-container">
@@ -659,5 +681,23 @@ const submitAction = async () => {
   font-family: inherit;
   outline: none;
   cursor: pointer;
+}
+.filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.search-input {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(30, 41, 59, 0.8);
+  color: white;
+  min-width: 200px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 </style>
