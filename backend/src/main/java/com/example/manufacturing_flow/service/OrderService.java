@@ -6,6 +6,7 @@ import com.example.manufacturing_flow.entity.Order;
 import com.example.manufacturing_flow.entity.OrderStatus;
 import com.example.manufacturing_flow.entity.Product;
 import com.example.manufacturing_flow.repository.OrderRepository;
+import com.example.manufacturing_flow.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CustomerService customerService;
     private final ProductService productService;
+    private final AuditLogService auditLogService;
+    private final SecurityUtils securityUtils;
 
     public List<Order> getAllOrders(String status, String customerName) {
         boolean hasStatus = status != null && !status.isBlank();
@@ -67,7 +70,14 @@ public class OrderService {
                 .totalPrice(totalPrice)
                 .build();
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        
+        // Log Audit
+        auditLogService.log(savedOrder.getId(), "ORDER_CREATED", 
+            "Pesanan baru dibuat untuk customer: " + customer.getName(), 
+            securityUtils.getCurrentUsername());
+
+        return savedOrder;
     }
 
     public void deleteOrder(Long id) {
@@ -76,5 +86,10 @@ public class OrderService {
             throw new RuntimeException("Tidak dapat membatalkan karena order sudah diproses!");
         }
         orderRepository.delete(order);
+        
+        // Log Audit
+        auditLogService.log(id, "ORDER_CANCELLED", 
+            "Pesanan dibatalkan oleh Admin", 
+            securityUtils.getCurrentUsername());
     }
 }

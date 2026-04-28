@@ -6,6 +6,7 @@ import com.example.manufacturing_flow.entity.OrderStatus;
 import com.example.manufacturing_flow.entity.Production;
 import com.example.manufacturing_flow.repository.OrderRepository;
 import com.example.manufacturing_flow.repository.ProductionRepository;
+import com.example.manufacturing_flow.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ public class ProductionService {
 
     private final ProductionRepository productionRepository;
     private final OrderRepository orderRepository;
+    private final AuditLogService auditLogService;
+    private final SecurityUtils securityUtils;
 
     public List<Production> getAllProductions() {
         return productionRepository.findAll();
@@ -47,7 +50,17 @@ public class ProductionService {
         if (order.getStatus() == OrderStatus.MATERIAL_PREPARED) {
             order.setStatus(OrderStatus.IN_PRODUCTION);
             orderRepository.save(order);
+            
+            // Log Audit Perubahan Status
+            auditLogService.log(order.getId(), "STATUS_CHANGE", 
+                "Status berubah: MATERIAL_PREPARED -> IN_PRODUCTION (Aktivitas Produksi Dimulai)", 
+                securityUtils.getCurrentUsername());
         }
+
+        // Log Aktivitas Produksi Spesifik
+        auditLogService.log(order.getId(), "PRODUCTION_ACTIVITY", 
+            "Aktivitas: " + request.getProductionType() + " pada mesin " + request.getMachineId(), 
+            username);
 
         return savedProduction;
     }
@@ -62,6 +75,13 @@ public class ProductionService {
         }
 
         order.setStatus(OrderStatus.COMPLETED_PRODUCTION);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Log Audit
+        auditLogService.log(orderId, "STATUS_CHANGE", 
+            "Status berubah: IN_PRODUCTION -> COMPLETED_PRODUCTION (Produksi Selesai)", 
+            securityUtils.getCurrentUsername());
+
+        return savedOrder;
     }
 }

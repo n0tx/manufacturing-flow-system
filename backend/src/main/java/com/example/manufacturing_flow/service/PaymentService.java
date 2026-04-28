@@ -6,6 +6,7 @@ import com.example.manufacturing_flow.entity.OrderStatus;
 import com.example.manufacturing_flow.entity.Payment;
 import com.example.manufacturing_flow.repository.OrderRepository;
 import com.example.manufacturing_flow.repository.PaymentRepository;
+import com.example.manufacturing_flow.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final AuditLogService auditLogService;
+    private final SecurityUtils securityUtils;
 
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
@@ -51,6 +54,11 @@ public class PaymentService {
         // Update Order Status
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
+
+        // Log Audit
+        auditLogService.log(order.getId(), "STATUS_CHANGE", 
+            "Status berubah: DELIVERED -> PAID (Pembayaran Diterima)", 
+            securityUtils.getCurrentUsername());
 
         return savedPayment;
     }

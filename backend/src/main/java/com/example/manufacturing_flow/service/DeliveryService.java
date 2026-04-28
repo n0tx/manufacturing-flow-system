@@ -6,6 +6,7 @@ import com.example.manufacturing_flow.entity.Order;
 import com.example.manufacturing_flow.entity.OrderStatus;
 import com.example.manufacturing_flow.repository.DeliveryRepository;
 import com.example.manufacturing_flow.repository.OrderRepository;
+import com.example.manufacturing_flow.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ public class DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
     private final OrderRepository orderRepository;
+    private final AuditLogService auditLogService;
+    private final SecurityUtils securityUtils;
 
     public List<Delivery> getAllDeliveries() {
         return deliveryRepository.findAll();
@@ -44,6 +47,11 @@ public class DeliveryService {
         // Update Order Status
         order.setStatus(OrderStatus.DELIVERED);
         orderRepository.save(order);
+
+        // Log Audit
+        auditLogService.log(order.getId(), "STATUS_CHANGE", 
+            "Status berubah: COMPLETED_PRODUCTION -> DELIVERED (Pesanan Dikirim)", 
+            securityUtils.getCurrentUsername());
 
         return savedDelivery;
     }

@@ -31,7 +31,7 @@ public class Payment {
     @Column(nullable = false)
     private BigDecimal amountPaid;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String referenceNumber;
 
     @Column(nullable = false, updatable = false)
