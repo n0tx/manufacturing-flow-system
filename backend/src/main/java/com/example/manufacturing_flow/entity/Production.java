@@ -27,6 +27,11 @@ public class Production {
     @Column(nullable = false)
     private ProductionType productionType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ProductionStatus status = ProductionStatus.SUCCESS;
+
     @Column(nullable = false)
     private String operatorName;
 

@@ -1,37 +1,47 @@
 package com.example.manufacturing_flow.controller;
 
 import com.example.manufacturing_flow.dto.DashboardSummary;
-import com.example.manufacturing_flow.entity.OrderStatus;
-import com.example.manufacturing_flow.repository.OrderRepository;
+import com.example.manufacturing_flow.dto.RevenueChartResponse;
+import com.example.manufacturing_flow.dto.TopProductResponse;
 import com.example.manufacturing_flow.response.ApiResponse;
+import com.example.manufacturing_flow.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@Tag(name = "Dashboard", description = "Dashboard Summary API")
+@Tag(name = "Dashboard", description = "Analytics and summary for management")
 public class DashboardController {
 
-    private final OrderRepository orderRepository;
+    private final DashboardService dashboardService;
 
     @GetMapping("/summary")
-    @Operation(summary = "Get dashboard summary of all orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get dashboard summary stats")
     public ResponseEntity<ApiResponse<DashboardSummary>> getSummary() {
-        DashboardSummary summary = DashboardSummary.builder()
-                .totalOrders(orderRepository.count())
-                .created(orderRepository.countByStatus(OrderStatus.CREATED))
-                .materialPrepared(orderRepository.countByStatus(OrderStatus.MATERIAL_PREPARED))
-                .inProduction(orderRepository.countByStatus(OrderStatus.IN_PRODUCTION))
-                .completedProduction(orderRepository.countByStatus(OrderStatus.COMPLETED_PRODUCTION))
-                .delivered(orderRepository.countByStatus(OrderStatus.DELIVERED))
-                .paid(orderRepository.countByStatus(OrderStatus.PAID))
-                .build();
-        return ResponseEntity.ok(ApiResponse.success("Success", summary));
+        return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getSummary()));
+    }
+
+    @GetMapping("/revenue-chart")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get monthly revenue chart data")
+    public ResponseEntity<ApiResponse<List<RevenueChartResponse>>> getRevenueChart() {
+        return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getRevenueChartData()));
+    }
+
+    @GetMapping("/top-products")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get top 5 products by sales")
+    public ResponseEntity<ApiResponse<List<TopProductResponse>>> getTopProducts() {
+        return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getTopProducts()));
     }
 }

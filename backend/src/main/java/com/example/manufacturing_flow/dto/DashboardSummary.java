@@ -13,4 +13,8 @@ public class DashboardSummary {
     private long completedProduction;
     private long delivered;
     private long paid;
+    private long totalRevenue; // sum payments.amount_paid
+    private long activeOrdersCount; // jumlah order != COMPLTED atau CANCELED
+    private long productionFailureRate; // persentasi produksi yang gagal vs total produksi
+    private long pendingPaymentsCount;// jumlah order yang sudah dikirim tapi belum lunas
 }
