@@ -7,9 +7,9 @@ import com.example.manufacturing_flow.response.ApiResponse;
 import com.example.manufacturing_flow.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.manufacturing_flow.security.SecurityRoles.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,21 +25,21 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/summary")
-    @PreAuthorize("hasRole('ADMIN')")
+    @HasAnyDashboardRole
     @Operation(summary = "Get dashboard summary stats")
     public ResponseEntity<ApiResponse<DashboardSummary>> getSummary() {
         return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getSummary()));
     }
 
     @GetMapping("/revenue-chart")
-    @PreAuthorize("hasRole('ADMIN')")
+    @IsAdmin
     @Operation(summary = "Get monthly revenue chart data")
     public ResponseEntity<ApiResponse<List<RevenueChartResponse>>> getRevenueChart() {
         return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getRevenueChartData()));
     }
 
     @GetMapping("/top-products")
-    @PreAuthorize("hasRole('ADMIN')")
+    @IsAdmin
     @Operation(summary = "Get top 5 products by sales")
     public ResponseEntity<ApiResponse<List<TopProductResponse>>> getTopProducts() {
         return ResponseEntity.ok(ApiResponse.success("Success", dashboardService.getTopProducts()));
