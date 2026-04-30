@@ -3,12 +3,16 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 
+import DashboardCharts from '../components/DashboardCharts.vue';
+
 const router = useRouter();
 const username = ref(localStorage.getItem('username') || 'User');
 const role = ref(localStorage.getItem('role') || 'UNKNOWN');
 
 // State
 const summary = ref(null);
+const revenueData = ref([]);
+const topProducts = ref([]);
 const orders = ref([]);
 const loading = ref(true);
 const filterStatus = ref('');
@@ -30,8 +34,10 @@ const formData = ref({});
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [summaryRes, ordersRes] = await Promise.all([
+    const [summaryRes, revRes, topRes, ordersRes] = await Promise.all([
       api.get('/dashboard/summary'),
+      api.get('/dashboard/revenue-chart'),
+      api.get('/dashboard/top-products'),
       api.get('/orders', { 
         params: { 
           status: filterStatus.value,
@@ -40,7 +46,13 @@ const fetchData = async () => {
       })
     ]);
     summary.value = summaryRes.data.data;
+    revenueData.value = revRes.data.data;
+    topProducts.value = topRes.data.data;
     orders.value = ordersRes.data.data.sort((a, b) => b.id - a.id); // Latest first
+
+    console.log('Summary Data:', summary.value);
+    console.log('Revenue Chart Data:', revenueData.value);
+    console.log('Top Products Data:', topProducts.value);
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     if (error.response?.status === 401) {
@@ -236,35 +248,38 @@ const submitAction = async () => {
           </div>
           
           <div class="glass-card summary-card">
-            <div class="summary-icon icon-yellow">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            </div>
-            <div class="summary-info">
-              <h3>In Production</h3>
-              <p class="summary-value">{{ summary?.inProduction || 0 }}</p>
-            </div>
-          </div>
-
-          <div class="glass-card summary-card">
-            <div class="summary-icon icon-green">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-            </div>
-            <div class="summary-info">
-              <h3>Delivered</h3>
-              <p class="summary-value">{{ summary?.delivered || 0 }}</p>
-            </div>
-          </div>
-
-          <div class="glass-card summary-card">
             <div class="summary-icon icon-emerald">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
             <div class="summary-info">
-              <h3>Paid (Selesai)</h3>
-              <p class="summary-value">{{ summary?.paid || 0 }}</p>
+              <h3>Total Revenue</h3>
+              <p class="summary-value">{{ formatCurrency(summary?.totalRevenue || 0) }}</p>
+            </div>
+          </div>
+
+          <div class="glass-card summary-card">
+            <div class="summary-icon icon-yellow">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="summary-info">
+              <h3>Active Production</h3>
+              <p class="summary-value">{{ summary?.activeOrdersCount || 0 }}</p>
+            </div>
+          </div>
+
+          <div class="glass-card summary-card">
+            <div class="summary-icon icon-red">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <div class="summary-info">
+              <h3>Failure Rate</h3>
+              <p class="summary-value text-red">{{ summary?.productionFailureRate?.toFixed(1) || 0 }}%</p>
             </div>
           </div>
         </div>
+
+        <!-- Charts Section (Level 5 Feature) -->
+        <DashboardCharts v-if="!loading && (revenueData.length > 0 || topProducts.length > 0)" :revenueData="revenueData" :topProducts="topProducts" />
 
         <!-- Orders Table -->
         <div class="glass-card mt-6">
@@ -599,6 +614,9 @@ const submitAction = async () => {
 .icon-yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .icon-green { background: linear-gradient(135deg, #10b981, #059669); }
 .icon-emerald { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+.icon-red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+.text-red { color: #f87171; }
 
 .summary-info h3 {
   font-size: 0.875rem;
