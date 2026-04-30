@@ -863,7 +863,13 @@ const submitAction = async () => {
 }
 /* Action Button Layouts */
 .action-cell {
-  min-width: 220px;
+  min-width: 280px;
+}
+.badge {
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 120px;
+  text-align: center;
 }
 .action-group {
   display: flex;
