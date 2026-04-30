@@ -17,6 +17,7 @@ const orders = ref([]);
 const loading = ref(true);
 const filterStatus = ref('');
 const searchQuery = ref('');
+const isAnalyticsVisible = ref(true);
 let debounceTimer = null;
 
 // Modal State
@@ -291,7 +292,22 @@ const submitAction = async () => {
         </div>
 
         <!-- Charts Section (Level 5 Feature) -->
-        <DashboardCharts v-if="role === 'ADMIN' && !loading && (revenueData.length > 0 || topProducts.length > 0)" :revenueData="revenueData" :topProducts="topProducts" />
+        <div v-if="role === 'ADMIN' && !loading" class="analytics-header">
+          <button @click="isAnalyticsVisible = !isAnalyticsVisible" class="btn-analytics-toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="{ 'rotate-180': !isAnalyticsVisible }">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+            {{ isAnalyticsVisible ? 'Hide Analytics' : 'Show Analytics' }}
+          </button>
+        </div>
+
+        <transition name="slide-down">
+          <DashboardCharts 
+            v-if="isAnalyticsVisible && role === 'ADMIN' && !loading && (revenueData.length > 0 || topProducts.length > 0)" 
+            :revenueData="revenueData" 
+            :topProducts="topProducts" 
+          />
+        </transition>
 
         <!-- Orders Table -->
         <div class="glass-card mt-6">
@@ -895,5 +911,51 @@ const submitAction = async () => {
   border-color: var(--primary-color);
   color: var(--primary-color);
   transform: translateY(-2px);
+}
+
+/* Analytics Toggle Styles */
+.analytics-header {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-analytics-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.btn-analytics-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Slide Down Transition */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.4s ease-out;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  transform: translateY(-20px);
 }
 </style>
