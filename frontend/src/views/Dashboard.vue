@@ -657,6 +657,15 @@ const submitAction = async () => {
 .btn-info:hover { background-color: #0284c7; }
 .btn-group { display: flex; gap: 0.5rem; }
 
+.btn-disabled {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #6ee7b7 !important;
+  cursor: not-allowed;
+  opacity: 1 !important;
+  font-weight: bold;
+}
+
 .text-success { color: #4ade80; }
 .fw-bold { font-weight: bold; }
 .text-center { text-align: center; }
