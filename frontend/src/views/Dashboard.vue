@@ -34,25 +34,37 @@ const formData = ref({});
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [summaryRes, revRes, topRes, ordersRes] = await Promise.all([
+    const promises = [
       api.get('/dashboard/summary'),
-      api.get('/dashboard/revenue-chart'),
-      api.get('/dashboard/top-products'),
       api.get('/orders', { 
         params: { 
           status: filterStatus.value,
           customerName: searchQuery.value
         }
       })
-    ]);
-    summary.value = summaryRes.data.data;
-    revenueData.value = revRes.data.data;
-    topProducts.value = topRes.data.data;
-    orders.value = ordersRes.data.data.sort((a, b) => b.id - a.id); // Latest first
+    ];
 
+    // Only fetch analytics if user is ADMIN
+    if (role.value === 'ADMIN') {
+      promises.push(api.get('/dashboard/revenue-chart'));
+      promises.push(api.get('/dashboard/top-products'));
+    }
+
+    const results = await Promise.all(promises);
+    
+    summary.value = results[0].data.data;
+    orders.value = results[1].data.data.sort((a, b) => b.id - a.id);
+
+    if (role.value === 'ADMIN') {
+      revenueData.value = results[2].data.data;
+      topProducts.value = results[3].data.data;
+    }
+    
     console.log('Summary Data:', summary.value);
-    console.log('Revenue Chart Data:', revenueData.value);
-    console.log('Top Products Data:', topProducts.value);
+    if (role.value === 'ADMIN') {
+      console.log('Revenue Chart Data:', revenueData.value);
+      console.log('Top Products Data:', topProducts.value);
+    }
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     if (error.response?.status === 401) {
@@ -247,7 +259,7 @@ const submitAction = async () => {
             </div>
           </div>
           
-          <div class="glass-card summary-card">
+          <div v-if="role === 'ADMIN'" class="glass-card summary-card">
             <div class="summary-icon icon-emerald">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
@@ -267,7 +279,7 @@ const submitAction = async () => {
             </div>
           </div>
 
-          <div class="glass-card summary-card">
+          <div v-if="role === 'ADMIN'" class="glass-card summary-card">
             <div class="summary-icon icon-red">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </div>
@@ -279,7 +291,7 @@ const submitAction = async () => {
         </div>
 
         <!-- Charts Section (Level 5 Feature) -->
-        <DashboardCharts v-if="!loading && (revenueData.length > 0 || topProducts.length > 0)" :revenueData="revenueData" :topProducts="topProducts" />
+        <DashboardCharts v-if="role === 'ADMIN' && !loading && (revenueData.length > 0 || topProducts.length > 0)" :revenueData="revenueData" :topProducts="topProducts" />
 
         <!-- Orders Table -->
         <div class="glass-card mt-6">
