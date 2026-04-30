@@ -22,6 +22,11 @@ public class DataSeeder implements CommandLineRunner {
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final ProductionRepository productionRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final ReceivingRepository receivingRepository;
+    private final DeliveryRepository deliveryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -113,6 +118,168 @@ public class DataSeeder implements CommandLineRunner {
         orderRepository.save(o6);
 
         log.info("Seeded 6 orders with diverse statuses");
-        log.info("Database seeder completed successfully!");
+
+
+        // F. Historical Revenue for Chart (Using separate orders to avoid One-to-One constraint violation)
+        Order oHistory1 = orderRepository.save(Order.builder()
+                .customer(c2).product(p2).quantity(100).status(OrderStatus.PAID)
+                .totalPrice(new BigDecimal("15000000"))
+                .orderDate(LocalDateTime.now().minusMonths(1)).build());
+        
+        paymentRepository.save(Payment.builder()
+                .order(oHistory1)
+                .amountPaid(oHistory1.getTotalPrice())
+                .paymentMethod(PaymentMethod.BANK_TRANSFER)
+                .referenceNumber("REF-HIST-001")
+                .paymentDate(LocalDateTime.now().minusMonths(1))
+                .build());
+
+        Order oHistory2 = orderRepository.save(Order.builder()
+                .customer(c1).product(p1).quantity(50).status(OrderStatus.PAID)
+                .totalPrice(new BigDecimal("12000000"))
+                .orderDate(LocalDateTime.now().minusMonths(2)).build());
+
+        paymentRepository.save(Payment.builder()
+                .order(oHistory2)
+                .amountPaid(oHistory2.getTotalPrice())
+                .paymentMethod(PaymentMethod.CASH)
+                .referenceNumber("REF-HIST-002")
+                .paymentDate(LocalDateTime.now().minusMonths(2))
+                .build());
+
+        // === THE MASTER ORDER (FULL FLOW 9 STEPS) ===
+        // We do this last so it gets the highest ID and appears at the top
+        Customer masterCust = customerRepository.save(new Customer(null, "PT. Maju Jaya (FULL FLOW)", "boss@majujaya.com", "081122334455", "Jakarta"));
+        
+        Order masterOrder = Order.builder()
+                .customer(masterCust)
+                .product(p1)
+                .quantity(100)
+                .totalPrice(p1.getPrice().multiply(new BigDecimal("100")))
+                .status(OrderStatus.PAID)
+                .orderDate(LocalDateTime.now())
+                .build();
+        masterOrder = orderRepository.save(masterOrder);
+
+        // A. Audit Logs for Master Order (9 Steps)
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "ORDER_CREATED", "Pesanan baru dibuat untuk customer: PT. Maju Jaya (FULL FLOW)", "admin", LocalDateTime.now().minusDays(5)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "STATUS_CHANGE", "Status berubah: CREATED -> MATERIAL_PREPARED (Bahan Baku Diterima)", "gudang", LocalDateTime.now().minusDays(4).plusHours(2)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "STATUS_CHANGE", "Status berubah: MATERIAL_PREPARED -> IN_PRODUCTION (Aktivitas Produksi Dimulai)", "produksi", LocalDateTime.now().minusDays(3).plusHours(1)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "PRODUCTION_ACTIVITY", "Aktivitas: KNITTING pada mesin MESIN-RJT-01", "produksi", LocalDateTime.now().minusDays(3).plusHours(2)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "PRODUCTION_ACTIVITY", "Aktivitas: DYEING pada mesin MESIN-DYE-02", "produksi", LocalDateTime.now().minusDays(3).plusHours(4)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "PRODUCTION_ACTIVITY", "Aktivitas: PRINTING pada mesin MESIN-PRT-01", "produksi", LocalDateTime.now().minusDays(2).plusHours(1)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "STATUS_CHANGE", "Status berubah: IN_PRODUCTION -> COMPLETED_PRODUCTION (Produksi Selesai)", "produksi", LocalDateTime.now().minusDays(2).plusHours(2)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "STATUS_CHANGE", "Status berubah: COMPLETED_PRODUCTION -> DELIVERED (Pesanan Dikirim)", "gudang", LocalDateTime.now().minusDays(1).plusHours(5)));
+        auditLogRepository.save(new AuditLog(null, masterOrder.getId(), "STATUS_CHANGE", "Status berubah: DELIVERED -> PAID (Pembayaran Diterima)", "finance", LocalDateTime.now().minusDays(1).plusHours(8)));
+
+        // B. Related Data for Master Order
+        receivingRepository.save(Receiving.builder().order(masterOrder).rawMaterialNotes("Diterima benang 1500kg").receivedBy("gudang").receivedDate(LocalDateTime.now().minusDays(4)).build());
+        productionRepository.save(Production.builder().order(masterOrder).productionType(ProductionType.KNITTING).operatorName("produksi").machineId("MC-01").status(ProductionStatus.SUCCESS).loggedAt(LocalDateTime.now().minusDays(3)).build());
+        deliveryRepository.save(Delivery.builder().order(masterOrder).driverName("Budi").vehiclePlate("B 1234 CD").trackingNumber("SJ-777").deliveryDate(LocalDateTime.now().minusDays(1)).build());
+        paymentRepository.save(Payment.builder().order(masterOrder).amountPaid(masterOrder.getTotalPrice()).paymentMethod(PaymentMethod.BANK_TRANSFER).referenceNumber("REF-MASTER").paymentDate(LocalDateTime.now().minusDays(1)).build());
+
+        // G. Failed Production Simulation
+        productionRepository.save(Production.builder().order(o3).productionType(ProductionType.KNITTING).operatorName("Andi").machineId("ERR-01").status(ProductionStatus.FAILED).notes("Error").loggedAt(LocalDateTime.now()).build());
+
+        log.info("Master Order with 9 logs seeded at the end with ID #" + masterOrder.getId());
+        
+        // H. SYNC HISTORY & TRANSACTIONAL DATA
+        
+        // o5: DELIVERED (Log + Data)
+        createAuditLog(o5, "ORDER_CREATED", "Pesanan baru dibuat");
+        saveLog(o5.getId(), "STATUS_CHANGE", "Status berubah: -> MATERIAL_PREPARED", "gudang", o5.getOrderDate().plusHours(2));
+        saveLog(o5.getId(), "STATUS_CHANGE", "Status berubah: -> IN_PRODUCTION", "produksi", o5.getOrderDate().plusDays(1));
+        saveLog(o5.getId(), "STATUS_CHANGE", "Status berubah: -> COMPLETED_PRODUCTION", "produksi", o5.getOrderDate().plusDays(2));
+        saveLog(o5.getId(), "STATUS_CHANGE", "Status berubah: -> DELIVERED", "gudang", o5.getOrderDate().plusDays(3));
+        seedReceiving(o5); 
+        seedProduction(o5, ProductionType.KNITTING, ProductionStatus.SUCCESS);
+        seedProduction(o5, ProductionType.DYEING, ProductionStatus.SUCCESS);
+        seedProduction(o5, ProductionType.PRINTING, ProductionStatus.SUCCESS);
+        seedDelivery(o5);
+
+        // o4: COMPLETED_PRODUCTION (Log + Data)
+        createAuditLog(o4, "ORDER_CREATED", "Pesanan baru dibuat");
+        saveLog(o4.getId(), "STATUS_CHANGE", "Status berubah: -> MATERIAL_PREPARED", "gudang", o4.getOrderDate().plusHours(2));
+        saveLog(o4.getId(), "STATUS_CHANGE", "Status berubah: -> IN_PRODUCTION", "produksi", o4.getOrderDate().plusDays(1));
+        saveLog(o4.getId(), "STATUS_CHANGE", "Status berubah: -> COMPLETED_PRODUCTION", "produksi", o4.getOrderDate().plusDays(2));
+        seedReceiving(o4);
+        seedProduction(o4, ProductionType.KNITTING, ProductionStatus.SUCCESS);
+        seedProduction(o4, ProductionType.DYEING, ProductionStatus.SUCCESS);
+        seedProduction(o4, ProductionType.PRINTING, ProductionStatus.SUCCESS);
+
+        // o3: IN_PRODUCTION (Log + Data)
+        createAuditLog(o3, "ORDER_CREATED", "Pesanan baru dibuat");
+        saveLog(o3.getId(), "STATUS_CHANGE", "Status berubah: -> MATERIAL_PREPARED", "gudang", o3.getOrderDate().plusHours(2));
+        saveLog(o3.getId(), "STATUS_CHANGE", "Status berubah: -> IN_PRODUCTION", "produksi", o3.getOrderDate().plusDays(1));
+        seedReceiving(o3);
+        seedProduction(o3, ProductionType.KNITTING, ProductionStatus.SUCCESS);
+
+        // o2: MATERIAL_PREPARED (Log + Data)
+        createAuditLog(o2, "ORDER_CREATED", "Pesanan baru dibuat");
+        saveLog(o2.getId(), "STATUS_CHANGE", "Status berubah: -> MATERIAL_PREPARED", "gudang", o2.getOrderDate().plusHours(2));
+        seedReceiving(o2);
+
+        // o6: PAID (Log + Data)
+        createAuditLog(o6, "ORDER_CREATED", "Pesanan baru dibuat");
+        saveLog(o6.getId(), "STATUS_CHANGE", "Status berubah: -> PAID", "finance", o6.getOrderDate().plusDays(1));
+        seedReceiving(o6);
+        seedProduction(o6, ProductionType.KNITTING, ProductionStatus.SUCCESS);
+        seedProduction(o6, ProductionType.DYEING, ProductionStatus.SUCCESS);
+        seedProduction(o6, ProductionType.PRINTING, ProductionStatus.SUCCESS);
+        seedDelivery(o6);
+        seedPayment(o6, "REF-PAID-06");
+
+        // Histori Payments
+        createAuditLog(oHistory1, "ORDER_CREATED", "Pesanan histori dibuat");
+        saveLog(oHistory1.getId(), "STATUS_CHANGE", "Status berubah: -> PAID", "system", oHistory1.getOrderDate().plusHours(1));
+        createAuditLog(oHistory2, "ORDER_CREATED", "Pesanan histori dibuat");
+        saveLog(oHistory2.getId(), "STATUS_CHANGE", "Status berubah: -> PAID", "system", oHistory2.getOrderDate().plusHours(1));
+
+        // Basic o1
+        createAuditLog(o1, "ORDER_CREATED", "Pesanan baru dibuat");
+
+        log.info("Database seeder completed with 100% Sync between Logs and Transactional Data!");
+    }
+
+    private void seedReceiving(Order order) {
+        receivingRepository.save(Receiving.builder()
+                .order(order).receivedBy("gudang")
+                .rawMaterialNotes("Bahan baku untuk Order #" + order.getId())
+                .receivedDate(order.getOrderDate().plusHours(1)).build());
+    }
+
+    private void seedProduction(Order order, ProductionType type, ProductionStatus status) {
+        productionRepository.save(Production.builder()
+                .order(order).productionType(type).operatorName("produksi")
+                .machineId("MC-" + type.name().substring(0, 3))
+                .status(status).loggedAt(order.getOrderDate().plusDays(1)).build());
+    }
+
+    private void seedDelivery(Order order) {
+        deliveryRepository.save(Delivery.builder()
+                .order(order).driverName("Kurir Internal")
+                .vehiclePlate("B 9999 MF").trackingNumber("TRK-" + order.getId())
+                .deliveryDate(order.getOrderDate().plusDays(3)).build());
+    }
+
+    private void seedPayment(Order order, String ref) {
+        paymentRepository.save(Payment.builder()
+                .order(order).amountPaid(order.getTotalPrice())
+                .paymentMethod(PaymentMethod.BANK_TRANSFER)
+                .referenceNumber(ref).paymentDate(order.getOrderDate().plusDays(4)).build());
+    }
+
+    private void saveLog(Long orderId, String action, String details, String user, LocalDateTime ts) {
+        auditLogRepository.save(new AuditLog(null, orderId, action, details, user, ts));
+    }
+
+    private void createAuditLog(Order order, String action, String details) {
+        auditLogRepository.save(AuditLog.builder()
+                .orderId(order.getId())
+                .action(action)
+                .details(details)
+                .username("system")
+                .timestamp(order.getOrderDate())
+                .build());
     }
 }

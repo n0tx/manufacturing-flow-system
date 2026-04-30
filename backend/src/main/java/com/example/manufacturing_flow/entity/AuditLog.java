@@ -36,6 +36,8 @@ public class AuditLog {
 
     @PrePersist
     protected void onCreate() {
-        timestamp = LocalDateTime.now();
+        if (this.timestamp == null) {
+            this.timestamp = LocalDateTime.now();
+        }
     }
 }
