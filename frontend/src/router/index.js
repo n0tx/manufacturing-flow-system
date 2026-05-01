@@ -12,7 +12,13 @@ const routes = [
     path: '/',
     name: 'Dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true }, // Protect this route
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/inventory',
+    name: 'Inventory',
+    component: () => import('../views/Inventory.vue'),
+    meta: { requiresAuth: true },
   },
 ];
 

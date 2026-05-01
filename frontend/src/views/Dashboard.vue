@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 
@@ -90,6 +90,10 @@ watch(searchQuery, () => {
 onMounted(() => {
   fetchData();
   window.addEventListener('keydown', handleEscKey);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscKey);
 });
 
 const handleEscKey = (e) => {
@@ -227,20 +231,7 @@ const submitAction = async () => {
 <template>
   <div class="dashboard-layout">
     <!-- Navbar -->
-    <nav class="navbar">
-      <div class="nav-brand">
-        <div class="logo-small">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-        </div>
-        <h1>PT. Bintang Tekstil Jaya</h1>
-      </div>
-      <div class="nav-user">
-        <span class="user-badge">{{ role }}</span>
-        <span class="user-name">Halo, <strong>{{ username }}</strong></span>
-        <button @click="handleLogout" class="btn btn-outline-danger btn-sm">Logout</button>
-      </div>
-    </nav>
-
+  <div class="dashboard-container">
     <main class="main-content">
       <div v-if="loading" class="loading-state">
         <div class="spinner-large"></div>
@@ -395,7 +386,7 @@ const submitAction = async () => {
                       <button v-else-if="order.status === 'PAID'" class="btn btn-sm btn-disabled" disabled>✓ Lunas</button>
 
                       <button @click="openAuditModal(order)" class="btn-history" title="Lihat History">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                       </button>
                     </div>
                   </td>
@@ -408,7 +399,7 @@ const submitAction = async () => {
     </main>
 
     <!-- Modal Form (Glassmorphism Overlay) -->
-    <div v-if="showModal" class="modal-overlay">
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="glass-card modal-content animate-fade-in">
         <div class="modal-header">
           <h3 v-if="modalType === 'RECEIVING'">Terima Bahan Baku (Receiving)</h3>
@@ -529,10 +520,10 @@ const submitAction = async () => {
             </div>
           </form>
         </div>
-      </div>
-    </div>
-
-  </div>
+      </div> <!-- modal-content -->
+    </div> <!-- modal-overlay -->
+  </div> <!-- dashboard-container -->
+</div> <!-- dashboard-layout -->
 </template>
 
 <style scoped>
@@ -542,77 +533,46 @@ const submitAction = async () => {
   flex-direction: column;
 }
 
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.logo-small {
-  background: var(--accent-primary);
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.nav-brand h1 {
-  font-size: 1.125rem;
-  margin: 0;
-}
-
-.nav-user {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-badge {
-  background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-}
-
-.btn-sm {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.btn-outline-danger {
-  background: transparent;
-  border: 1px solid var(--danger);
-  color: #fca5a5;
-}
-.btn-outline-danger:hover {
-  background: var(--danger);
-  color: white;
-}
-
 .main-content {
   flex: 1;
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+.btn-outline-danger {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+.btn-outline-danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border: none;
+}
+
+.btn-outline-warning {
+  background: transparent;
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
 }
 
 .summary-grid {
@@ -890,27 +850,24 @@ const submitAction = async () => {
 .action-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: nowrap;
 }
 .btn-history {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: none;
+  border: none;
   color: rgba(255, 255, 255, 0.6);
   padding: 4px;
-  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  margin-left: 10px;
+  margin-left: 0.5rem;
 }
 .btn-history:hover {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: var(--primary-color);
   color: var(--primary-color);
-  transform: translateY(-2px);
+  transform: scale(1.2);
 }
 
 /* Analytics Toggle Styles */
@@ -918,6 +875,24 @@ const submitAction = async () => {
   margin-top: 2rem;
   display: flex;
   justify-content: flex-end;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.3s;
+  margin-right: 0.5rem;
+}
+
+.btn-icon:hover { 
+  color: #fff; 
+  transform: scale(1.2); 
 }
 
 .btn-analytics-toggle {
