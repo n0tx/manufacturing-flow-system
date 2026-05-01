@@ -27,6 +27,7 @@ public class DataSeeder implements CommandLineRunner {
     private final AuditLogRepository auditLogRepository;
     private final ReceivingRepository receivingRepository;
     private final DeliveryRepository deliveryRepository;
+    private final InventoryRepository inventoryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -44,6 +45,14 @@ public class DataSeeder implements CommandLineRunner {
         userRepository.save(new User(null, "produksi", passwordEncoder.encode("produksi123"), Role.PRODUKSI));
         userRepository.save(new User(null, "finance", passwordEncoder.encode("finance123"), Role.FINANCE));
         log.info("Seeded 4 users (admin, gudang, produksi, finance)");
+
+        // 1.5 Seed Inventory (Materials)
+        if (inventoryRepository.count() == 0) {
+            inventoryRepository.save(new Inventory(null, "BNG-001", "Benang Katun 30s", new BigDecimal("1000"), "KG", new BigDecimal("100")));
+            inventoryRepository.save(new Inventory(null, "KIN-001", "Kain Putih (Raw)", new BigDecimal("500"), "METER", new BigDecimal("50")));
+            inventoryRepository.save(new Inventory(null, "PWR-001", "Pewarna Biru Indigo", new BigDecimal("100"), "KG", new BigDecimal("10")));
+            log.info("Seeded 3 initial inventory materials");
+        }
 
         // 2. Seed Customers
         Customer c1 = customerRepository.save(new Customer(null, "PT. Maju Jaya", "contact@majujaya.com", "081234567890", "Jl. Sudirman No. 10, Jakarta"));
