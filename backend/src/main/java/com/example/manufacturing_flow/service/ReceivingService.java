@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -21,6 +22,7 @@ public class ReceivingService {
     private final OrderRepository orderRepository;
     private final AuditLogService auditLogService;
     private final SecurityUtils securityUtils;
+    private final InventoryService inventoryService;
 
     public List<Receiving> getAllReceivings() {
         return receivingRepository.findAll();
@@ -43,6 +45,19 @@ public class ReceivingService {
                 .build();
 
         Receiving savedReceiving = receivingRepository.save(receiving);
+
+        // INTEGRASI LEVEL 6: Tambah Stok Otomatis
+        if (order.getProduct().getMaterial() != null) {
+            BigDecimal amountToReceive = order.getProduct().getMaterialUsagePerUnit()
+                    .multiply(new BigDecimal(order.getQuantity()));
+            
+            inventoryService.addStock(
+                order.getProduct().getMaterial().getId(),
+                amountToReceive,
+                "RECEIVING FOR ORDER #" + order.getId(),
+                "Stok masuk otomatis dari alur Receiving"
+            );
+        }
 
         // Update Order Status
         order.setStatus(OrderStatus.MATERIAL_PREPARED);

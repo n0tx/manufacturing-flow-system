@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -21,6 +22,7 @@ public class ProductionService {
     private final OrderRepository orderRepository;
     private final AuditLogService auditLogService;
     private final SecurityUtils securityUtils;
+    private final InventoryService inventoryService;
 
     public List<Production> getAllProductions() {
         return productionRepository.findAll();
@@ -48,6 +50,19 @@ public class ProductionService {
 
         // Ubah status ke IN_PRODUCTION jika ini adalah log pertama
         if (order.getStatus() == OrderStatus.MATERIAL_PREPARED) {
+            // INTEGRASI LEVEL 6: Potong Stok Otomatis
+            if (order.getProduct().getMaterial() != null) {
+                BigDecimal totalNeeded = order.getProduct().getMaterialUsagePerUnit()
+                        .multiply(new BigDecimal(order.getQuantity()));
+                
+                inventoryService.reduceStock(
+                    order.getProduct().getMaterial().getId(),
+                    totalNeeded,
+                    "ORDER #" + order.getId(),
+                    "Otomatis potong stok saat produksi dimulai"
+                );
+            }
+
             order.setStatus(OrderStatus.IN_PRODUCTION);
             orderRepository.save(order);
             

@@ -30,4 +30,11 @@ public class Product {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "material_id")
+    private Inventory material;
+
+    @Column(precision = 10, scale = 3)
+    private BigDecimal materialUsagePerUnit;
 }

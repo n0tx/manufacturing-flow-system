@@ -59,10 +59,19 @@ public class DataSeeder implements CommandLineRunner {
         Customer c2 = customerRepository.save(new Customer(null, "CV. Sandang Perkasa", "info@sandang.com", "089876543210", "Jl. Merdeka No. 45, Bandung"));
         log.info("Seeded 2 customers");
 
-        // 3. Seed Products
-        Product p1 = productRepository.save(new Product(null, "Kain Katun Combed 30s", "SKU-KATUN-01", new BigDecimal("75000"), "Kain rajut kualitas tinggi"));
-        Product p2 = productRepository.save(new Product(null, "Kain Polyester", "SKU-POLY-01", new BigDecimal("45000"), "Kain sintetis tahan lama"));
-        log.info("Seeded 2 products");
+        // 3. Seed Products linked to Inventory
+        Inventory yarn = inventoryRepository.findBySku("BNG-001").orElse(null);
+        Inventory rawFabric = inventoryRepository.findBySku("KIN-001").orElse(null);
+
+        Product p1 = productRepository.save(Product.builder()
+                .name("Kain Katun Combed 30s").sku("SKU-KATUN-01").price(new BigDecimal("75000"))
+                .description("Kain rajut kualitas tinggi").material(yarn).materialUsagePerUnit(new BigDecimal("0.500")).build());
+
+        Product p2 = productRepository.save(Product.builder()
+                .name("Kain Polyester").sku("SKU-POLY-01").price(new BigDecimal("45000"))
+                .description("Kain sintetis tahan lama").material(rawFabric).materialUsagePerUnit(new BigDecimal("1.000")).build());
+        
+        log.info("Seeded 2 products linked to materials");
 
         // 4. Seed Orders with different statuses
         
