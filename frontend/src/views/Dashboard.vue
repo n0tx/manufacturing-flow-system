@@ -17,7 +17,7 @@ const orders = ref([]);
 const loading = ref(true);
 const filterStatus = ref('');
 const searchQuery = ref('');
-const isAnalyticsVisible = ref(true);
+const isAnalyticsVisible = ref(false);
 let debounceTimer = null;
 
 // Modal State
