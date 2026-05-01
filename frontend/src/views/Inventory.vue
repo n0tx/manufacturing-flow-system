@@ -4,7 +4,7 @@
       <h1 class="page-title">Inventory Management</h1>
       <button @click="openAdjustmentModal(null)" class="btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span style="font-size: 1rem; font-weight: 600; letter-spacing: 0.1px;">Manual Adjustment</span>
+        <span style="font-size: 1.01rem; font-weight: 600; letter-spacing: 0.1px;">Stock Adjustment</span>
       </button>
     </div>
 
@@ -398,7 +398,7 @@ onUnmounted(() => {
 .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; }
 .btn-cancel { background: transparent; border: none; color: white; cursor: pointer; }
 .btn-primary { 
-  background: #3b82f6; color: white; border: none; padding: 0.8rem 1.5rem; 
+  background: #3b82f6; color: white; border: none; padding: 0.7rem 0.9rem; 
   border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;
   display: flex;
   align-items: center;
