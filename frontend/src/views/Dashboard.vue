@@ -229,8 +229,6 @@ const submitAction = async () => {
 </script>
 
 <template>
-  <div class="dashboard-layout">
-    <!-- Navbar -->
   <div class="dashboard-container">
     <main class="main-content">
       <div v-if="loading" class="loading-state">
@@ -523,12 +521,11 @@ const submitAction = async () => {
       </div> <!-- modal-content -->
     </div> <!-- modal-overlay -->
   </div> <!-- dashboard-container -->
-</div> <!-- dashboard-layout -->
 </template>
 
 <style scoped>
-.dashboard-layout {
-  min-height: 100vh;
+.dashboard-container {
+  min-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
 }
