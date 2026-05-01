@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
@@ -35,10 +35,21 @@ const route = useRoute();
 
 const username = ref(localStorage.getItem('username') || 'User');
 const role = ref(localStorage.getItem('role') || 'UNKNOWN');
+const isAuthenticated = ref(false);
 
-const isAuthenticated = computed(() => {
-  return !!localStorage.getItem('token') && route.name !== 'Login';
-});
+// Re-check auth state on every route change (localStorage is not reactive)
+const checkAuth = () => {
+  const token = localStorage.getItem('token');
+  isAuthenticated.value = !!token && route.name !== 'Login';
+  if (token) {
+    username.value = localStorage.getItem('username') || 'User';
+    role.value = localStorage.getItem('role') || 'UNKNOWN';
+  }
+};
+
+watch(route, () => {
+  checkAuth();
+}, { immediate: true });
 
 const handleLogout = () => {
   localStorage.removeItem('token');
