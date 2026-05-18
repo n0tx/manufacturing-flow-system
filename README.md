@@ -3,7 +3,7 @@
 Sistem MVP untuk mendemonstrasikan **Alur Manufaktur Tekstil** — mulai dari pemesanan kain hingga pelunasan pembayaran.
 Dibangun menggunakan **Java 17 + Spring Boot 3.2.4** (Backend) dengan dokumentasi API otomatis via **Swagger UI**.
 
-> Proyek ini terinspirasi dari proses bisnis perusahaan tekstil **PT Sinar Sukses Mandiri** yang bergerak di bidang Knitting, Dyeing, dan Printing kain.
+> Proyek ini terinspirasi dari proses bisnis perusahaan tekstil yang bergerak di bidang Knitting, Dyeing, dan Printing kain.
 
 ---
 
